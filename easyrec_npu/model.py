@@ -64,10 +64,10 @@ class MultiTowerDIN(nn.Module):
         self.embeddings = nn.ModuleDict()
         for feature in self.id_features:
             name = feature["name"]
-            bucket_size = int(feature["bucket_size"]) + 1
-            self.embeddings[name] = nn.Embedding(bucket_size, embedding_dim, padding_idx=0)
-        self.embeddings["price_bucket"] = nn.Embedding(len(config["data"]["price_boundaries"]) + 2, embedding_dim, padding_idx=0)
-        self.embeddings["pid_hash"] = nn.Embedding(int(features["pid_hash_bucket_size"]) + 1, embedding_dim, padding_idx=0)
+            bucket_size = int(feature["bucket_size"])
+            self.embeddings[name] = nn.Embedding(bucket_size, embedding_dim)
+        self.embeddings["price_bucket"] = nn.Embedding(len(config["data"]["price_boundaries"]) + 1, embedding_dim)
+        self.embeddings["pid_hash"] = nn.Embedding(int(features["pid_hash_bucket_size"]), embedding_dim)
 
         deep_input_dim = len(self.deep_feature_order) * embedding_dim
         self.deep_tower = MLP(deep_input_dim, list(model_conf["deep_hidden_units"]))

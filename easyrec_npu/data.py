@@ -25,23 +25,20 @@ def discover_files(pattern: str) -> list[str]:
 
 def _normalize_ids(values: np.ndarray, bucket_size: int) -> np.ndarray:
     values = np.nan_to_num(values, nan=0).astype(np.int64, copy=False)
-    if bucket_size <= 1:
-        return np.zeros_like(values, dtype=np.int64)
-    mask = values > 0
-    values = values.copy()
-    values[mask] = ((values[mask] - 1) % (bucket_size - 1)) + 1
-    values[~mask] = 0
-    return values
+    normalized = values.copy()
+    invalid = (normalized < 0) | (normalized >= bucket_size)
+    normalized[invalid] = 0
+    return normalized
 
 
 def _hash_string(text: str, bucket_size: int) -> int:
     if not text:
         return 0
-    if bucket_size <= 1:
+    if bucket_size <= 0:
         return 0
     digest = hashlib.blake2b(text.encode("utf-8"), digest_size=8).digest()
     raw = int.from_bytes(digest, byteorder="little", signed=False)
-    return raw % (bucket_size - 1) + 1
+    return raw % bucket_size
 
 
 @lru_cache(maxsize=200000)
@@ -57,10 +54,10 @@ def _parse_sequence_cached(text: str, max_len: int, bucket_size: int) -> tuple[i
             raw = int(float(token))
         except ValueError:
             raw = 0
-        if raw <= 0:
+        if raw < 0 or raw >= bucket_size:
             values.append(0)
         else:
-            values.append(((raw - 1) % (bucket_size - 1)) + 1 if bucket_size > 1 else 0)
+            values.append(raw)
     return tuple(values)
 
 
@@ -132,8 +129,7 @@ class ParquetBatchDataset(IterableDataset):
 
         boundaries = np.asarray(self.data_conf["price_boundaries"], dtype=np.float32)
         prices = frame["price"].fillna(0.0).to_numpy(dtype=np.float32, copy=False)
-        price_bucket = np.searchsorted(boundaries, prices, side="right").astype(np.int64) + 1
-        price_bucket[prices <= 0] = 0
+        price_bucket = np.searchsorted(boundaries, prices, side="right").astype(np.int64)
         encoded["price_bucket"] = torch.from_numpy(price_bucket)
 
         pid_values = frame["pid"].fillna("").astype(str).tolist()
