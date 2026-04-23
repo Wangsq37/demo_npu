@@ -1,0 +1,6 @@
+pyyaml>=6.0
+pyarrow>=6.0.0
+pandas>=2.0.0
+numpy>=1.24.0
+# torch 与 torch_npu 需要严格匹配 CANN / Ascend Extension for PyTorch 版本，
+# 请按 README 中的昇腾官方文档单独安装。
